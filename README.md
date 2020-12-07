@@ -21,7 +21,7 @@ Requests for read/write
 0+1 records in
 0+1 records out
 115 bytes copied, 0.000241373 s, 476 kB/s
-# dd of=/dev/null if=/dev/mapper/dmp1 bs=4k count=1
+dd of=/dev/null if=/dev/mapper/dmp1 bs=4k count=1
 1+0 records in
 1+0 records out
 4096 bytes (4.1 kB, 4.0 KiB) copied, 0.000166921 s, 24.5 MB/s`
