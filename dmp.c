@@ -68,10 +68,10 @@ static int dmp_ctr(struct dm_target *ti, unsigned int argc, char **argv)
         }
         mdt->size_read=0;
         mdt->size_write=0;
-        mdt->count_read=1;
-        mdt->count_write=1;
-        avg_read=0;
-        avg_write=0;
+        mdt->count_read=0;
+        mdt->count_write=0;
+        mdt->avg_read=0;
+        mdt->avg_write=0;
         ti->private = mdt;
 	printk(KERN_CRIT "\n>>out function basic_target_ctr \n");
 	return 0;
@@ -110,7 +110,7 @@ static int dmp_map(struct dm_target *ti, struct bio *bio)
 		break;
 	}
 	sprintf( buf_msg ,"read:\n  reqs:  %d\n  avg size: %d\nwrite: \n  reqs: %d \n  avg size: %d\ntotal:\n  reqs: %d \n  size: %d\n", 
-	mdt->count_read-1, mdt->avg_read , mdt->count_write,mdt->avg_write,mdt->count_read+mdt->count_write, mdt->avg_size);
+	mdt->count_read, mdt->avg_read , mdt->count_write,mdt->avg_write,mdt->count_read+mdt->count_write, mdt->avg_size);
 	submit_bio(bio);
 
 	return DM_MAPIO_SUBMITTED;
