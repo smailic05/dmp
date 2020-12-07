@@ -10,17 +10,23 @@
 #include <linux/bio.h>
 
 #define DM_MSG_PREFIX "zero"
+static char buf_msg[ 500] ;
 
 struct my_dm_target {
         struct dm_dev *dev;
         sector_t start;
+        int size_read;
+       int size_write;
+        int count_read;
+        int count_write;
+        int avg_read;
+        int avg_write;
+        int avg_size;
 };
-/*
- * Construct a dummy mapping that only returns zeros
- */
+
  static ssize_t x_show( struct kobject  *kobject , struct kobj_attribute  *attr, char *buf ) {
 
-	//strcpy( buf, buf_msg );
+	strcpy( buf, buf_msg );
 	
 	return strlen( buf );
 }
@@ -60,7 +66,12 @@ static int zero_ctr(struct dm_target *ti, unsigned int argc, char **argv)
                 ti->error = "dm-basic_target: Device lookup failed";
                 goto bad;
         }
-
+        mdt->size_read=0;
+        mdt->size_write=0;
+        mdt->count_read=1;
+        mdt->count_write=1;
+        avg_read=0;
+        avg_write=0;
         ti->private = mdt;
 	printk(KERN_CRIT "\n>>out function basic_target_ctr \n");
 	return 0;
@@ -81,22 +92,28 @@ static int zero_map(struct dm_target *ti, struct bio *bio)
 	case REQ_OP_READ:
 		if (bio->bi_opf & REQ_RAHEAD)
 		{
+			mdt->size_read+=bio->bi_iter.bi_size;
+			mdt->count_read++;
+			mdt->avg_read=mdt->size_read/mdt->count_read;
+			mdt->avg_size=(mdt->size_read+mdt->size_write)/(mdt->count_read+mdt->count_write);
 			printk(KERN_CRIT "\n<< READ REQUEST\n");
 		}
 		//zero_fill_bio(bio);
 		break;
 	case REQ_OP_WRITE:
 		printk(KERN_CRIT "\n<< WRITE REQUEST\n");
-
+		mdt->size_write+=bio->bi_iter.bi_size;
+		mdt->count_write++;
+		mdt->avg_write=mdt->size_write/mdt->count_write;
+		mdt->avg_size=(mdt->size_read+mdt->size_write)/(mdt->count_read+mdt->count_write);
 		break;
 	default:
 		break;
 	}
-
+	sprintf( buf_msg ,"read:\n  reqs:  %d\n  avg size: %d\nwrite: \n  reqs: %d \n  avg size: %d\ntotal:\n  reqs: %d \n  size: %d\n", 
+	mdt->count_read-1, mdt->avg_read , mdt->count_write,mdt->avg_write,mdt->count_read+mdt->count_write, mdt->avg_size);
 	submit_bio(bio);
-	//bio_endio(bio);
 
-	/* accepted bio, don't make new request */
 	return DM_MAPIO_SUBMITTED;
 }
 static void zero_dtr(struct dm_target *ti)
