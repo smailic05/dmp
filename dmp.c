@@ -1,10 +1,5 @@
 #include <linux/device-mapper.h>
 #include <linux/fs.h>
-#include <linux/cdev.h>
-#include <linux/parport.h>
-#include <asm/uaccess.h>
-#include <linux/pci.h>
-#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/bio.h>
@@ -14,9 +9,8 @@ static char buf_msg[ 500] ;
 
 struct my_dm_target {
         struct dm_dev *dev;
-        sector_t start;
         int size_read;
-       int size_write;
+       	int size_write;
         int count_read;
         int count_write;
         int avg_read;
@@ -41,8 +35,7 @@ static struct kobject *volumes;
 static int dmp_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 {
         struct my_dm_target *mdt;
-        unsigned long long start;
-        if (argc != 2) {
+        if (argc != 1) {
                 printk(KERN_CRIT "\n Invalid no.of arguments.\n");
                 ti->error = "Invalid argument count";
                 return -EINVAL;
@@ -55,13 +48,6 @@ static int dmp_ctr(struct dm_target *ti, unsigned int argc, char **argv)
                 ti->error = "dm-basic_target: Cannot allocate linear context";
                 return -ENOMEM;
         }
-         
-        if(sscanf(argv[1], "%llu", &start)!=1)
-        {
-                ti->error = "dm-basic_target: Invalid device sector";
-                goto bad;
-        }
-        mdt->start=(sector_t)start;
         if (dm_get_device(ti, argv[0], dm_table_get_mode(ti->table), &mdt->dev)) {
                 ti->error = "dm-basic_target: Device lookup failed";
                 goto bad;
@@ -77,7 +63,7 @@ static int dmp_ctr(struct dm_target *ti, unsigned int argc, char **argv)
 	return 0;
   bad:
         kfree(mdt);
-        printk(KERN_CRIT "\n>>out function basic_target_ctr with errorrrrrrrrrr \n");           
+        printk(KERN_CRIT "\n>>out function basic_target_ctr with error \n");           
         return -EINVAL;
 }
 
@@ -92,11 +78,12 @@ static int dmp_map(struct dm_target *ti, struct bio *bio)
 	case REQ_OP_READ:
 		if (bio->bi_opf & REQ_RAHEAD)
 		{
+			printk(KERN_CRIT "\n<< READ REQUEST\n");
 			mdt->size_read+=bio->bi_iter.bi_size;
 			mdt->count_read++;
 			mdt->avg_read=mdt->size_read/mdt->count_read;
 			mdt->avg_size=(mdt->size_read+mdt->size_write)/(mdt->count_read+mdt->count_write);
-			printk(KERN_CRIT "\n<< READ REQUEST\n");
+			
 		}
 		break;
 	case REQ_OP_WRITE:
@@ -161,6 +148,6 @@ module_init(dm_dmp_init)
 module_exit(dm_dmp_exit)
 
 MODULE_AUTHOR("Murad Ismailov <murad0660@gmail.com>");
-MODULE_DESCRIPTION(DM_NAME " target returning dmps");
+MODULE_DESCRIPTION(DM_NAME " simple target mapper");
 MODULE_LICENSE("GPL");
 
